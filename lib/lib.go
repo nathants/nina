@@ -703,7 +703,7 @@ func generateResponse(ctx context.Context, req AiRequest, reasoningCallback func
 	} else if strings.HasPrefix(input.Model, "o3") {
 		input.Reasoning = &openai.ReasoningRequest{
 			Summary: "auto",
-			Effort:  "high",
+			Effort:  "medium",
 		}
 	} else {
 		input.Temperature = util.Ptr(0.3)
