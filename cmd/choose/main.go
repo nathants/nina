@@ -31,6 +31,7 @@ func init() {
 }
 
 type chooseArgs struct {
+	Prompt   string `arg:"positional,required" help:"The prompt describing what to select"`
 	Model    string `arg:"-m,--model" help:"AI model to use" default:"gemini"`
 	NoStream bool   `arg:"-r,--no-stream" help:"Disable streaming"`
 	Debug    bool   `arg:"-d,--debug" help:"Enable debug output (show JSON)"`
@@ -40,10 +41,10 @@ type chooseArgs struct {
 func (chooseArgs) Description() string {
 	return `choose - AI-powered file selection tool
 
-Reads file paths from stdin and uses AI to select relevant files based on criteria.
+Reads file paths from stdin and uses AI to select relevant files based on prompt.
 
 Example usage:
-  find -name "*.go" | nina choose -m gemini
+  find -name "*.go" | nina choose  -m gemini "select files related to authentication"
 
 Supported models (short names):
   - o3, o3-flex, o3-pro
@@ -121,9 +122,12 @@ func choose() {
 		os.Exit(1)
 	}
 
-	// Read file contents and build prompt
+	// Build prompt according to CHOOSE.md schema
 	var promptBuilder strings.Builder
-	promptBuilder.WriteString("Please analyze these files and select the most relevant ones:\n\n")
+	promptBuilder.WriteString("<NinaInput>\n\n")
+	promptBuilder.WriteString("<NinaPrompt>\n\n")
+	promptBuilder.WriteString(args.Prompt)
+	promptBuilder.WriteString("\n\n</NinaPrompt>\n\n")
 
 	for _, filePath := range filePaths {
 		content, err := os.ReadFile(filePath)
@@ -132,11 +136,23 @@ func choose() {
 			continue
 		}
 
-		promptBuilder.WriteString(fmt.Sprintf("=== File: %s ===\n", filePath))
-		promptBuilder.WriteString(string(content))
-		promptBuilder.WriteString("\n\n")
+		promptBuilder.WriteString("<NinaFile>\n\n")
+		promptBuilder.WriteString("<NinaPath>\n")
+		promptBuilder.WriteString(filePath)
+		promptBuilder.WriteString("\n</NinaPath>\n\n")
+		promptBuilder.WriteString("<NinaContent>\n\n")
+
+		// Add line numbers to content
+		lines := strings.Split(string(content), "\n")
+		for i, line := range lines {
+			promptBuilder.WriteString(fmt.Sprintf("%d: %s\n", i+1, line))
+		}
+
+		promptBuilder.WriteString("\n</NinaContent>\n\n")
+		promptBuilder.WriteString("</NinaFile>\n\n")
 	}
 
+	promptBuilder.WriteString("</NinaInput>")
 	prompt := promptBuilder.String()
 
 	// Generate timestamp for both input and output files

@@ -43,9 +43,7 @@
 <NinaInput>
 
 <NinaPrompt>
-
 [user prompt describing work to do]
-
 </NinaPrompt>
 
 <NinaFile>
@@ -55,9 +53,7 @@
 </NinaPath>
 
 <NinaContent>
-
 [file contents with line numbers]
-
 </NinaContent>
 
 </NinaFile>
