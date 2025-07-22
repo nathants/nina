@@ -13,8 +13,8 @@ import (
 	"sync"
 
 	"google.golang.org/genai"
-	providers "nina/providers"
-	oauth "nina/providers/oauth"
+	providers "github.com/nathants/nina/providers"
+	oauth "github.com/nathants/nina/providers/oauth"
 )
 
 func init() {

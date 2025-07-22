@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"nina/providers/claude"
+	"github.com/nathants/nina/providers/claude"
 	"strings"
 	"time"
 )

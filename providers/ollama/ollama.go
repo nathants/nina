@@ -15,7 +15,7 @@ import (
 	"strings"
 	"time"
 	
-	providers "nina/providers"
+	providers "github.com/nathants/nina/providers"
 )
 
 type ollamaMessage struct {

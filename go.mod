@@ -1,4 +1,4 @@
-module nina
+module github.com/nathants/nina
 
 go 1.24.4
 

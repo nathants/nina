@@ -5,7 +5,7 @@ package lib
 
 import (
 	"fmt"
-	claude "nina/providers/claude"
+	claude "github.com/nathants/nina/providers/claude"
 	"testing"
 )
 

@@ -6,8 +6,8 @@ package lib
 import (
 	"context"
 	"fmt"
-	gemini "nina/providers/gemini"
-	util "nina/util"
+	gemini "github.com/nathants/nina/providers/gemini"
+	util "github.com/nathants/nina/util"
 	"os"
 	"strings"
 )

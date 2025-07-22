@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"nina/providers/oauth"
+	"github.com/nathants/nina/providers/oauth"
 )
 
 func List() error {

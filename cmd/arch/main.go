@@ -7,19 +7,19 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"nina/lib"
-	"nina/prompts"
-	util "nina/util"
+	"github.com/nathants/nina/lib"
+	"github.com/nathants/nina/prompts"
+	util "github.com/nathants/nina/util"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/alexflint/go-arg"
-	"nina/providers/claude"
-	"nina/providers/gemini"
-	"nina/providers/grok"
-	"nina/providers/openai"
+	"github.com/nathants/nina/providers/claude"
+	"github.com/nathants/nina/providers/gemini"
+	"github.com/nathants/nina/providers/grok"
+	"github.com/nathants/nina/providers/openai"
 )
 
 func init() {

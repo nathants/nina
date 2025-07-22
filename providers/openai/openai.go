@@ -11,8 +11,8 @@ import (
 	"mime/multipart"
 	"net/http"
 
-	providers "nina/providers"
-	util "nina/util"
+	providers "github.com/nathants/nina/providers"
+	util "github.com/nathants/nina/util"
 	"os"
 	"strings"
 	"sync"

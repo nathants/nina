@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/alexflint/go-arg"
-	"nina/lib"
-	"nina/prompts"
-	claude "nina/providers/claude"
-	grok "nina/providers/grok"
-	groq "nina/providers/groq"
-	openai "nina/providers/openai"
-	util "nina/util"
+	"github.com/nathants/nina/lib"
+	"github.com/nathants/nina/prompts"
+	claude "github.com/nathants/nina/providers/claude"
+	grok "github.com/nathants/nina/providers/grok"
+	groq "github.com/nathants/nina/providers/groq"
+	openai "github.com/nathants/nina/providers/openai"
+	util "github.com/nathants/nina/util"
 )
 
 func init() {

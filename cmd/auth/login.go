@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/alexflint/go-arg"
-	oauth "nina/providers/oauth"
+	oauth "github.com/nathants/nina/providers/oauth"
 )
 
 

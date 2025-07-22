@@ -6,8 +6,8 @@ package lib
 import (
 	"context"
 	"fmt"
-	grok "nina/providers/grok"
-	util "nina/util"
+	grok "github.com/nathants/nina/providers/grok"
+	util "github.com/nathants/nina/util"
 	"os"
 	"os/exec"
 	"strings"

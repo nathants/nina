@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/alexflint/go-arg"
-	"nina/lib"
+	"github.com/nathants/nina/lib"
 )
 
 type authLogoutArgs struct {

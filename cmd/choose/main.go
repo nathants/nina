@@ -8,19 +8,19 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"nina/lib"
+	"github.com/nathants/nina/lib"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
 
-	"nina/prompts"
-	"nina/providers/claude"
-	"nina/providers/gemini"
-	"nina/providers/grok"
-	"nina/providers/groq"
-	"nina/providers/oauth"
-	"nina/providers/openai"
+	"github.com/nathants/nina/prompts"
+	"github.com/nathants/nina/providers/claude"
+	"github.com/nathants/nina/providers/gemini"
+	"github.com/nathants/nina/providers/grok"
+	"github.com/nathants/nina/providers/groq"
+	"github.com/nathants/nina/providers/oauth"
+	"github.com/nathants/nina/providers/openai"
 
 	"github.com/alexflint/go-arg"
 )
@@ -154,7 +154,7 @@ func choose() {
 		fmt.Fprintf(os.Stderr, "Error creating agents/choose directory: %v\n", err)
 		// Fall back to /tmp with timestamp
 		agentsDir = fmt.Sprintf("/tmp/choose-%s", sessionTimestamp)
-		os.MkdirAll(agentsDir, 0755)
+		_ = os.MkdirAll(agentsDir, 0755)
 		baseFilename = fmt.Sprintf("choose-%s-%s", args.Model, timestamp)
 	}
 

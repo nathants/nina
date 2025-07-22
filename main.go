@@ -12,13 +12,13 @@ import (
 	"strings"
 
 	"github.com/alexflint/go-arg"
-	_ "nina/cmd/arch"
-	_ "nina/cmd/ask"
-	_ "nina/cmd/auth"
-	_ "nina/cmd/choose"
-	_ "nina/cmd/edit"
-	_ "nina/cmd/run"
-	"nina/lib"
+	_ "github.com/nathants/nina/cmd/arch"
+	_ "github.com/nathants/nina/cmd/ask"
+	_ "github.com/nathants/nina/cmd/auth"
+	_ "github.com/nathants/nina/cmd/choose"
+	_ "github.com/nathants/nina/cmd/edit"
+	_ "github.com/nathants/nina/cmd/run"
+	"github.com/nathants/nina/lib"
 )
 
 func usage() {

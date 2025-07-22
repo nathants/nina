@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"nina/lib"
-	util "nina/util"
+	"github.com/nathants/nina/lib"
+	util "github.com/nathants/nina/util"
 )
 
 // setupTestSession creates a session state with the given file content for testing.

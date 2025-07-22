@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	util "nina/util"
+	util "github.com/nathants/nina/util"
 )
 
 // ProcessorResult contains the result of processing output

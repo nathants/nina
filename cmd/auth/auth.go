@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os"
 	"github.com/alexflint/go-arg"
-	"nina/lib"
+	"github.com/nathants/nina/lib"
 )
 
 func init() {

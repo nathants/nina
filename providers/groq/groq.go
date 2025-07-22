@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	providers "nina/providers"
+	providers "github.com/nathants/nina/providers"
 	"os"
 	"strings"
 )

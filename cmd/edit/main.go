@@ -6,8 +6,8 @@ package edit
 import (
 	"context"
 	"fmt"
-	"nina/lib"
-	util "nina/util"
+	"github.com/nathants/nina/lib"
+	util "github.com/nathants/nina/util"
 	"os"
 	"strings"
 

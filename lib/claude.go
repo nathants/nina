@@ -6,9 +6,9 @@ package lib
 import (
 	"context"
 	"fmt"
-	claude "nina/providers/claude"
-	oauth "nina/providers/oauth"
-	util "nina/util"
+	claude "github.com/nathants/nina/providers/claude"
+	oauth "github.com/nathants/nina/providers/oauth"
+	util "github.com/nathants/nina/util"
 	"os"
 	"os/exec"
 	"strings"

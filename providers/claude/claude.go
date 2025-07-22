@@ -14,8 +14,8 @@ import (
 	"sync"
 	"time"
 
-	"nina/providers"
-	util "nina/util"
+	"github.com/nathants/nina/providers"
+	util "github.com/nathants/nina/util"
 )
 
 func init() {

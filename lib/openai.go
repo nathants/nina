@@ -3,8 +3,8 @@ package lib
 import (
 	"context"
 	"fmt"
-	openai "nina/providers/openai"
-	util "nina/util"
+	openai "github.com/nathants/nina/providers/openai"
+	util "github.com/nathants/nina/util"
 	"os"
 	"strings"
 )

@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"google.golang.org/genai"
-	providers "nina/providers"
+	providers "github.com/nathants/nina/providers"
 )
 
 const (
