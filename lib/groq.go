@@ -23,9 +23,13 @@ type GroqClient struct {
 // NewGroqClient creates a new Groq client with an empty message history
 func NewGroqClient() (*GroqClient, error) {
 	// Check for API key
-	apiKey := os.Getenv("GROQ_KEY")
+	apiKey := os.Getenv("GROQ_API_KEY")
 	if apiKey == "" {
-		return nil, fmt.Errorf("neither GROQ_KEY nor GROQ_API_KEY environment variable set")
+		// Fallback to old name for backward compatibility
+		apiKey = os.Getenv("GROQ_KEY")
+	}
+	if apiKey == "" {
+		return nil, fmt.Errorf("GROQ_API_KEY environment variable not set")
 	}
 
 	client := &GroqClient{

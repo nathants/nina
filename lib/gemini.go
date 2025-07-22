@@ -22,10 +22,14 @@ type GeminiClient struct {
 func NewGeminiClient() (*GeminiClient, error) {
 	// Check for credentials
 	token := os.Getenv("GEMINI_OAUTH_TOKEN")
-	apiKey := os.Getenv("GOOGLE_AISTUDIO_TOKEN")
+	apiKey := os.Getenv("GOOGLE_API_KEY")
+	if apiKey == "" {
+		// Fallback to old name for backward compatibility
+		apiKey = os.Getenv("GOOGLE_AISTUDIO_TOKEN")
+	}
 
 	if token == "" && apiKey == "" {
-		return nil, fmt.Errorf("GEMINI_OAUTH_TOKEN or GOOGLE_AISTUDIO_TOKEN environment variable not set")
+		return nil, fmt.Errorf("GEMINI_OAUTH_TOKEN or GOOGLE_API_KEY environment variable not set")
 	}
 
 	return &GeminiClient{

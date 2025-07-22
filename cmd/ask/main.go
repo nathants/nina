@@ -254,7 +254,7 @@ func callProvider(prov, modelID, message string, stream bool, useOAuth bool, sea
 	if useOAuth && prov == "openai" {
 		token, err := oauth.OpenAIAccess()
 		if err == nil {
-			_ = os.Setenv("OPENAI_OAUTH_API_KEY", token)
+			_ = os.Setenv("OPENAI_OAUTH_TOKEN", token)
 		}
 	}
 

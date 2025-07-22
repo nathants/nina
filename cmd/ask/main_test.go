@@ -40,7 +40,7 @@ func TestWebSearchToolFormatting(t *testing.T) {
 	}
 
 	// Skip tests if no API keys are set
-	if os.Getenv("OPENAI_KEY") == "" && os.Getenv("ANTHROPIC_KEY") == "" {
+	if os.Getenv("OPENAI_API_KEY") == "" && os.Getenv("ANTHROPIC_API_KEY") == "" {
 		t.Skip("Skipping integration tests: no API keys found")
 	}
 
@@ -219,8 +219,8 @@ func TestWebSearchJSONLOutput(t *testing.T) {
 	}
 
 	// Skip tests if no API keys are set
-	hasOpenAI := os.Getenv("OPENAI_KEY") != ""
-	hasClaude := os.Getenv("ANTHROPIC_KEY") != ""
+	hasOpenAI := os.Getenv("OPENAI_API_KEY") != ""
+	hasClaude := os.Getenv("ANTHROPIC_API_KEY") != ""
 	hasGemini := os.Getenv("GOOGLE_API_KEY") != ""
 	
 	if !hasOpenAI && !hasClaude && !hasGemini {
@@ -232,10 +232,10 @@ func TestWebSearchJSONLOutput(t *testing.T) {
 			// Skip specific provider tests if API key not available
 			provider, _ := parseModel(tt.model)
 			if provider == "openai" && !hasOpenAI {
-				t.Skip("Skipping OpenAI test: OPENAI_KEY not set")
+				t.Skip("Skipping OpenAI test: OPENAI_API_KEY not set")
 			}
 			if provider == "claude" && !hasClaude {
-				t.Skip("Skipping Claude test: ANTHROPIC_KEY not set")
+				t.Skip("Skipping Claude test: ANTHROPIC_API_KEY not set")
 			}
 			if provider == "gemini" && !hasGemini {
 				t.Skip("Skipping Gemini test: GOOGLE_API_KEY not set")

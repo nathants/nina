@@ -24,10 +24,7 @@ func NewGrokClient() (*GrokClient, error) {
 	// Check for API key
 	apiKey := os.Getenv("XAI_API_KEY")
 	if apiKey == "" {
-		apiKey = os.Getenv("GROK_TOKEN")
-	}
-	if apiKey == "" {
-		return nil, fmt.Errorf("neither XAI_API_KEY nor GROK_TOKEN environment variable set")
+		return nil, fmt.Errorf("XAI_API_KEY environment variable not set")
 	}
 
 	client := &GrokClient{

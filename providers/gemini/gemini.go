@@ -36,7 +36,11 @@ func getClient(ctx context.Context) (*genai.Client, error) {
 		apiKey := ""
 
 		if token == "" {
-			apiKey = os.Getenv("GOOGLE_AISTUDIO_TOKEN")
+			apiKey = os.Getenv("GOOGLE_API_KEY")
+			if apiKey == "" {
+				// Fallback to old name for backward compatibility
+				apiKey = os.Getenv("GOOGLE_AISTUDIO_TOKEN")
+			}
 		}
 
 		// Check if we have valid credentials
@@ -49,7 +53,7 @@ func getClient(ctx context.Context) (*genai.Client, error) {
 		} else if apiKey != "" {
 			// oncePrint.Do(func() { fmt.Fprintln(os.Stderr, "gemini using API key") })
 		} else {
-			cliErr = fmt.Errorf("no gemini credentials: login with ask-login -p gemini or set GOOGLE_AISTUDIO_TOKEN")
+			cliErr = fmt.Errorf("no gemini credentials: login with ask-login -p gemini or set GOOGLE_API_KEY")
 			return
 		}
 

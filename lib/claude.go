@@ -33,10 +33,14 @@ func NewClaudeClient() (*ClaudeClient, error) {
 	}
 
 	// Fall back to API key if OAuth not available
-	apiKey := os.Getenv("CLAUDE_KEY")
+	apiKey := os.Getenv("ANTHROPIC_API_KEY")
+	if apiKey == "" {
+		// Fallback to old name for backward compatibility
+		apiKey = os.Getenv("CLAUDE_KEY")
+	}
 
 	if oauthToken == "" && apiKey == "" {
-		return nil, fmt.Errorf("neither OAuth credentials nor CLAUDE_KEY environment variable available")
+		return nil, fmt.Errorf("neither OAuth credentials nor ANTHROPIC_API_KEY environment variable available")
 	}
 
 	client := &ClaudeClient{

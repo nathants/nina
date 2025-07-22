@@ -153,7 +153,12 @@ func HandleOpenRouterChat(ctx context.Context, req Request, reasoningCallback fu
 	}
 
 	outReq.Header.Set("Content-Type", "application/json")
-	outReq.Header.Set("Authorization", "Bearer "+os.Getenv("OPENROUTER_KEY"))
+	apiKey := os.Getenv("OPENROUTER_API_KEY")
+	if apiKey == "" {
+		// Fallback to old name for backward compatibility
+		apiKey = os.Getenv("OPENROUTER_KEY")
+	}
+	outReq.Header.Set("Authorization", "Bearer "+apiKey)
 	outReq.Header.Set("HTTP-Referer", "https://ninabot.com")
 	outReq.Header.Set("X-Title", "NinaBot")
 	if req.Stream {

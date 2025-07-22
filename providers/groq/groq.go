@@ -23,7 +23,12 @@ func init() {
 
 // getAuthToken retrieves the Groq API key from environment.
 func getAuthToken() string {
-	return os.Getenv("GROQ_KEY")
+	apiKey := os.Getenv("GROQ_API_KEY")
+	if apiKey == "" {
+		// Fallback to old name for backward compatibility
+		apiKey = os.Getenv("GROQ_KEY")
+	}
+	return apiKey
 }
 
 // Message represents a single chat message.
@@ -127,7 +132,7 @@ func Handle(ctx context.Context, req Request) (*HandleResponse, error) {
 
 	authToken := getAuthToken()
 	if authToken == "" {
-		return nil, fmt.Errorf("GROQ_KEY not set")
+		return nil, fmt.Errorf("GROQ_API_KEY not set")
 	}
 
 	body, err := json.Marshal(req)

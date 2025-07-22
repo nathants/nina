@@ -19,9 +19,13 @@ type OpenAIClient struct {
 
 // NewOpenAIClient creates a new OpenAI client and loads any saved response ID
 func NewOpenAIClient() (*OpenAIClient, error) {
-	apiKey := os.Getenv("OPENAI_KEY")
+	apiKey := os.Getenv("OPENAI_API_KEY")
 	if apiKey == "" {
-		return nil, fmt.Errorf("OPENAI_KEY environment variable not set")
+		// Fallback to old name for backward compatibility
+		apiKey = os.Getenv("OPENAI_KEY")
+	}
+	if apiKey == "" {
+		return nil, fmt.Errorf("OPENAI_API_KEY environment variable not set")
 	}
 
 	client := &OpenAIClient{}

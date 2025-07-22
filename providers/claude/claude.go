@@ -200,7 +200,12 @@ func setupClaudeAuth(req *http.Request, useOAuth bool) {
 		} else {
 
 			// Fall back to API key if OAuth token not available
-			req.Header.Set("x-api-key", os.Getenv("CLAUDE_KEY"))
+			apiKey := os.Getenv("ANTHROPIC_API_KEY")
+			if apiKey == "" {
+				// Fallback to old name for backward compatibility
+				apiKey = os.Getenv("CLAUDE_KEY")
+			}
+			req.Header.Set("x-api-key", apiKey)
 			if !logOnce {
 				logOnce = true
 				_, _ = fmt.Fprintf(os.Stderr, "OAuth requested but token not found, falling back to API key authentication\n")
@@ -208,7 +213,12 @@ func setupClaudeAuth(req *http.Request, useOAuth bool) {
 		}
 	} else {
 		// Use API key authentication
-		req.Header.Set("x-api-key", os.Getenv("CLAUDE_KEY"))
+		apiKey := os.Getenv("ANTHROPIC_API_KEY")
+		if apiKey == "" {
+			// Fallback to old name for backward compatibility
+			apiKey = os.Getenv("CLAUDE_KEY")
+		}
+		req.Header.Set("x-api-key", apiKey)
 		if !logOnce {
 			logOnce = true
 			_, _ = fmt.Fprintln(os.Stderr, "Using API key authentication for Claude API")

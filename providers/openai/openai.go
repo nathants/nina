@@ -27,15 +27,20 @@ func init() {
 
 // var authOnce sync.Once
 
-// getAuthToken chooses between OAuth-generated API key and OPENAI_KEY.
+// getAuthToken chooses between OAuth-generated token and OPENAI_API_KEY.
 func getAuthToken() string {
-	token := os.Getenv("OPENAI_OAUTH_API_KEY")
+	token := os.Getenv("OPENAI_OAUTH_TOKEN")
 	if token != "" {
 		// authOnce.Do(func() { fmt.Fprintln(os.Stderr, "Using OAuth authentication for OpenAI API") })
 		return token
 	}
 	// authOnce.Do(func() { fmt.Fprintln(os.Stderr, "Using API key authentication for OpenAI API") })
-	return os.Getenv("OPENAI_KEY")
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	if apiKey == "" {
+		// Fallback to old name for backward compatibility
+		apiKey = os.Getenv("OPENAI_KEY")
+	}
+	return apiKey
 }
 
 type Response struct {

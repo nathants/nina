@@ -69,9 +69,6 @@ func Handle(ctx context.Context, req Request) (string, error) {
 	httpReq.Header.Set("Content-Type", "application/json")
 
 	apiKey := os.Getenv("XAI_API_KEY")
-	if apiKey == "" {
-		apiKey = os.Getenv("GROK_TOKEN")
-	}
 	httpReq.Header.Set("Authorization", "Bearer "+apiKey)
 
 	cli := providers.LongTimeoutClient
