@@ -257,7 +257,7 @@ func executeNinaBash(bashCmd util.BashCommand) ProcessorEvent {
 		command = exec.Command(bashCmd.Command, bashCmd.Args...)
 	} else {
 		// Single command string - execute via bash
-		command = exec.Command("timeout", "600s", "bash", "-c", bashCmd.Command)
+		command = exec.Command("timeout", "300s", "bash", "-c", bashCmd.Command)
 	}
 
 	stdout, err := command.Output()
