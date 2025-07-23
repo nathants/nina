@@ -18,6 +18,7 @@ import (
 	_ "github.com/nathants/nina/cmd/choose"
 	_ "github.com/nathants/nina/cmd/edit"
 	_ "github.com/nathants/nina/cmd/run"
+	_ "github.com/nathants/nina/cmd/tools"
 	"github.com/nathants/nina/lib"
 )
 

@@ -680,3 +680,323 @@ func HandleBatch(ctx context.Context, requests []BatchRequestItem) ([]BatchIndiv
 
 	return results, nil
 }
+
+// Tool represents a tool definition for Claude's tool use feature
+type Tool struct {
+	Name        string         `json:"name"`
+	Description string         `json:"description"`
+	InputSchema map[string]any `json:"input_schema"`
+}
+
+// ToolChoice specifies which tools Claude can use
+type ToolChoice struct {
+	Type string `json:"type"` // "auto", "any", or "tool"
+	Name string `json:"name,omitempty"` // Only for type "tool"
+}
+
+// ToolUse represents a tool call in Claude's response
+type ToolUse struct {
+	Type  string         `json:"type"` // "tool_use"
+	ID    string         `json:"id"`
+	Name  string         `json:"name"`
+	Input map[string]any `json:"input"`
+}
+
+// ToolResult represents the result of executing a tool
+type ToolResult struct {
+	Type      string `json:"type"` // "tool_result"
+	ToolUseID string `json:"tool_use_id"`
+	Content   string `json:"content"`
+}
+
+// RequestWithTools extends Request to include tools
+type RequestWithTools struct {
+	Model      string      `json:"model"`
+	System     []Text      `json:"system"`
+	Messages   []Message   `json:"messages"`
+	MaxTokens  int         `json:"max_tokens,omitempty"`
+	Tools      []Tool      `json:"tools,omitempty"`
+	ToolChoice *ToolChoice `json:"tool_choice,omitempty"`
+	Stream     bool        `json:"stream,omitempty"`
+}
+
+// ResponseWithTools extends Response to handle tool use
+type ResponseWithTools struct {
+	Content    []any  `json:"content"` // Can be ContentBlock or ToolUse
+	Usage      Usage  `json:"usage"`
+	StopReason string `json:"stop_reason"`
+}
+
+// HandleToolsResponse contains the response from HandleTools
+type HandleToolsResponse struct {
+	Text      string
+	Usage     Usage
+	ToolCalls []ToolUse
+}
+
+// HandleTools processes a request with tool support
+func HandleTools(ctx context.Context, model, systemPrompt, userPrompt string, maxTokens int, debug bool) (*HandleToolsResponse, error) {
+	// Define available tools
+	tools := []Tool{
+		{
+			Name:        "execute_bash",
+			Description: "Execute a bash command and return the output",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"command": map[string]any{
+						"type":        "string",
+						"description": "The bash command to execute",
+					},
+				},
+				"required": []string{"command"},
+			},
+		},
+		{
+			Name:        "read_file",
+			Description: "Read the contents of a file",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "The file path to read",
+					},
+				},
+				"required": []string{"path"},
+			},
+		},
+		{
+			Name:        "write_file",
+			Description: "Write content to a file",
+			InputSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"path": map[string]any{
+						"type":        "string",
+						"description": "The file path to write to",
+					},
+					"content": map[string]any{
+						"type":        "string",
+						"description": "The content to write",
+					},
+				},
+				"required": []string{"path", "content"},
+			},
+		},
+	}
+
+	// Create messages array - we'll use the any type for content
+	messages := []map[string]any{{
+		"role": "user",
+		"content": userPrompt,
+	}}
+
+	// Tool execution loop
+	var totalUsage Usage
+	var allToolCalls []ToolUse
+	var finalText string
+
+	for {
+
+		// Create request with proper structure
+		reqBody := map[string]any{
+			"model":      model,
+			"system":     systemPrompt,
+			"messages":   messages,
+			"max_tokens": maxTokens,
+			"tools":      tools,
+		}
+
+		// Send request
+		resp, err := sendToolRequestRaw(ctx, reqBody, debug)
+		if err != nil {
+			return nil, fmt.Errorf("failed to send request: %w", err)
+		}
+
+		// Accumulate usage
+		totalUsage.InputTokens += resp.Usage.InputTokens
+		totalUsage.OutputTokens += resp.Usage.OutputTokens
+
+		// Process response content
+		var textParts []string
+		var toolCalls []ToolUse
+		var assistantContent []any
+
+		for _, content := range resp.Content {
+			switch v := content.(type) {
+			case map[string]any:
+				contentType, _ := v["type"].(string)
+				switch contentType {
+				case "text":
+					if text, ok := v["text"].(string); ok {
+						textParts = append(textParts, text)
+						assistantContent = append(assistantContent, v)
+					}
+				case "tool_use":
+					toolCall := ToolUse{
+						Type:  "tool_use",
+						ID:    v["id"].(string),
+						Name:  v["name"].(string),
+						Input: v["input"].(map[string]any),
+					}
+					toolCalls = append(toolCalls, toolCall)
+					allToolCalls = append(allToolCalls, toolCall)
+					assistantContent = append(assistantContent, v)
+				}
+			}
+		}
+
+		finalText = strings.Join(textParts, "\n")
+
+		// Add assistant message to history
+		messages = append(messages, map[string]any{
+			"role":    "assistant",
+			"content": assistantContent,
+		})
+
+		// If no tool calls, we're done
+		if len(toolCalls) == 0 || resp.StopReason == "end_turn" {
+			break
+		}
+
+		// Execute tools and prepare results
+		var userContent []any
+		for _, toolCall := range toolCalls {
+			if debug {
+				fmt.Fprintf(os.Stderr, "Executing tool: %s\n", toolCall.Name)
+			}
+
+			result, err := executeToolCall(toolCall)
+			if err != nil {
+				result = fmt.Sprintf("Error: %v", err)
+			}
+
+			userContent = append(userContent, map[string]any{
+				"type":        "tool_result",
+				"tool_use_id": toolCall.ID,
+				"content":     result,
+			})
+		}
+
+		// Add tool results as user message
+		messages = append(messages, map[string]any{
+			"role":    "user",
+			"content": userContent,
+		})
+	}
+
+	return &HandleToolsResponse{
+		Text:      finalText,
+		Usage:     totalUsage,
+		ToolCalls: allToolCalls,
+	}, nil
+}
+
+// sendToolRequestRaw sends a raw request map to Claude API
+func sendToolRequestRaw(ctx context.Context, reqBody map[string]any, debug bool) (*ResponseWithTools, error) {
+	// Tools API doesn't support OAuth, always use API key
+	useOAuth := false
+
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("json marshal error: %v", err)
+	}
+
+	if debug {
+		fmt.Fprintf(os.Stderr, "Request: %s\n", string(body))
+	}
+
+	outReq, err := http.NewRequestWithContext(
+		ctx,
+		"POST",
+		"https://api.anthropic.com/v1/messages",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	setupClaudeAuth(outReq, useOAuth)
+	outReq.Header.Set("anthropic-version", "2023-06-01")
+	outReq.Header.Set("anthropic-beta", "tools-2024-04-04")
+	outReq.Header.Set("Content-Type", "application/json")
+
+	client := providers.LongTimeoutClient
+	resp, err := client.Do(outReq)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if debug {
+		fmt.Fprintf(os.Stderr, "Response: %s\n", string(respBody))
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("API error: %s - %s", resp.Status, string(respBody))
+	}
+
+	var response ResponseWithTools
+	err = json.Unmarshal(respBody, &response)
+	if err != nil {
+		return nil, fmt.Errorf("json unmarshal error: %v", err)
+	}
+
+	return &response, nil
+}
+
+
+// executeToolCall executes a tool and returns the result
+func executeToolCall(toolCall ToolUse) (string, error) {
+	switch toolCall.Name {
+	case "execute_bash":
+		command, ok := toolCall.Input["command"].(string)
+		if !ok {
+			return "", fmt.Errorf("invalid command parameter")
+		}
+
+		// Execute bash command
+		cmd := exec.Command("bash", "-c", command)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			// Include output even on error
+			return fmt.Sprintf("Exit code: %v\nOutput:\n%s", err, string(output)), nil
+		}
+		return string(output), nil
+
+	case "read_file":
+		path, ok := toolCall.Input["path"].(string)
+		if !ok {
+			return "", fmt.Errorf("invalid path parameter")
+		}
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return "", err
+		}
+		return string(content), nil
+
+	case "write_file":
+		path, ok := toolCall.Input["path"].(string)
+		if !ok {
+			return "", fmt.Errorf("invalid path parameter")
+		}
+		content, ok := toolCall.Input["content"].(string)
+		if !ok {
+			return "", fmt.Errorf("invalid content parameter")
+		}
+		err := os.WriteFile(path, []byte(content), 0644)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Written %d bytes to %s", len(content), path), nil
+
+	default:
+		return "", fmt.Errorf("unknown tool: %s", toolCall.Name)
+	}
+}
