@@ -211,12 +211,21 @@ func ConvertToRangeUpdates(ctx context.Context, updates []util.FileUpdate, sessi
 
 				converterMessage := b.String()
 
+				// Save initial input when retry happens (attempt 2)
+				if attempt == 2 {
+					errorDir := util.GetAgentsSubdir("edit-errors")
+					_ = os.MkdirAll(errorDir, 0755)
+					errorNum := GetNextAPILogNumber()
+					errorPath := filepath.Join(errorDir, fmt.Sprintf("%05d.txt", errorNum))
+					_ = os.WriteFile(errorPath, []byte(converterMessage), 0644)
+				}
+
 				converterReq := AiRequest{
 					// Model: "o3",
 					// Model:  "o4-mini",
 					Model: "sonnet",
 					// Model: "gemini-2.5-pro",
-					Effort: "medium",
+					// Effort: "medium",
 					System:  converterPrompt,
 					Message: converterMessage,
 				}
