@@ -102,7 +102,7 @@ CRITICAL: You always read and consider `NINA.md` for repo specific instructions 
 CRITICAL: You ALWAYS plan and track your tasks in `TODO.md`
 CRITICAL: Overwrite this file with every output as task status changes
 
-Location: `$GITROOT/TODO.md` (only use one `TODO.md` file)
+Location: `$gitroot/TODO.md` (only use one `TODO.md` file)
 Purpose: Track tasks and document thinking/decisions/tradeoffs
 Auditing: The user monitors this file as you work, keep it updated, accurate, and communicate clearly
 Format: Use checklists ONLY for work items, for everything else use regular lists, text, etc
