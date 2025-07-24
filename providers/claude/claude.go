@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/nathants/nina/prompts"
 	"github.com/nathants/nina/providers"
 	util "github.com/nathants/nina/util"
 )
@@ -734,56 +735,90 @@ type HandleToolsResponse struct {
 	ToolCalls []ToolUse
 }
 
+
+
+
+// TranslateToClaudeTools converts generic tool definitions to Claude's expected format.
+// Maps tool names and field names to match Claude's API requirements.
+func TranslateToClaudeTools(tools []prompts.ToolDefinition) []map[string]any {
+	claudeTools := make([]map[string]any, 0, len(tools))
+	
+	for _, tool := range tools {
+		// Map our tool names to Claude's expected names
+		claudeName := tool.Name
+		claudeDescription := tool.Description
+		
+		// For NinaBash, Claude expects "execute_bash"
+		if tool.Name == "NinaBash" {
+			claudeName = "execute_bash"
+		}
+		// For NinaChange, we'll use "change_file"
+		if tool.Name == "NinaChange" {
+			claudeName = "change_file"
+		}
+		
+		// Build properties for input schema
+		properties := make(map[string]any)
+		required := make([]string, 0)
+		
+		for _, field := range tool.InputSchema.Fields {
+			fieldName := field.Name
+			// Map field names for Claude
+			if tool.Name == "NinaBash" && field.Name == "command" {
+				// Keep as "command" for execute_bash
+			} else if tool.Name == "NinaChange" {
+				// Map NinaPath -> path, NinaSearch -> search, NinaReplace -> replace
+				switch field.Name {
+				case "NinaPath":
+					fieldName = "path"
+				case "NinaSearch":
+					fieldName = "search"
+				case "NinaReplace":
+					fieldName = "replace"
+				}
+			}
+			
+			properties[fieldName] = map[string]any{
+				"type":        field.Type,
+				"description": field.Description,
+			}
+			
+			if field.Required {
+				required = append(required, fieldName)
+			}
+		}
+		
+		claudeTool := map[string]any{
+			"name":        claudeName,
+			"description": claudeDescription,
+			"input_schema": map[string]any{
+				"type":       "object",
+				"properties": properties,
+				"required":   required,
+			},
+		}
+		
+		claudeTools = append(claudeTools, claudeTool)
+	}
+	
+	return claudeTools
+}
+
 // HandleTools processes a request with tool support
 func HandleTools(ctx context.Context, model, systemPrompt, userPrompt string, maxTokens int, debug bool) (*HandleToolsResponse, error) {
-	// Define available tools
-	tools := []Tool{
-		{
-			Name:        "execute_bash",
-			Description: "Execute a bash command and return the output",
-			InputSchema: map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"command": map[string]any{
-						"type":        "string",
-						"description": "The bash command to execute",
-					},
-				},
-				"required": []string{"command"},
-			},
-		},
-		{
-			Name:        "read_file",
-			Description: "Read the contents of a file",
-			InputSchema: map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"path": map[string]any{
-						"type":        "string",
-						"description": "The file path to read",
-					},
-				},
-				"required": []string{"path"},
-			},
-		},
-		{
-			Name:        "write_file",
-			Description: "Write content to a file",
-			InputSchema: map[string]any{
-				"type": "object",
-				"properties": map[string]any{
-					"path": map[string]any{
-						"type":        "string",
-						"description": "The file path to write to",
-					},
-					"content": map[string]any{
-						"type":        "string",
-						"description": "The content to write",
-					},
-				},
-				"required": []string{"path", "content"},
-			},
-		},
+	// Get tool definitions from centralized source and translate to Claude format
+	toolDefs := prompts.GetToolDefinitions()
+	claudeToolDefs := TranslateToClaudeTools(toolDefs)
+	
+	// Convert to Claude's Tool type
+	tools := make([]Tool, 0, len(claudeToolDefs))
+	for _, def := range claudeToolDefs {
+		tool := Tool{
+			Name:        def["name"].(string),
+			Description: def["description"].(string),
+			InputSchema: def["input_schema"].(map[string]any),
+		}
+		tools = append(tools, tool)
 	}
 
 	// Create messages array - we'll use the any type for content
@@ -952,7 +987,7 @@ func sendToolRequestRaw(ctx context.Context, reqBody map[string]any, debug bool)
 }
 
 
-// executeToolCall executes a tool and returns the result
+// executeToolCall executes a tool and returns the result matching XML.md format
 func executeToolCall(toolCall ToolUse) (string, error) {
 	switch toolCall.Name {
 	case "execute_bash":
@@ -961,40 +996,62 @@ func executeToolCall(toolCall ToolUse) (string, error) {
 			return "", fmt.Errorf("invalid command parameter")
 		}
 
-		// Execute bash command
+		// Execute bash command as defined in XML.md: bash -c "$cmd"
 		cmd := exec.Command("bash", "-c", command)
 		output, err := cmd.CombinedOutput()
+		
+		// Format result to match NinaResult structure from XML.md
+		exitCode := 0
 		if err != nil {
-			// Include output even on error
-			return fmt.Sprintf("Exit code: %v\nOutput:\n%s", err, string(output)), nil
+			if exitErr, ok := err.(*exec.ExitError); ok {
+				exitCode = exitErr.ExitCode()
+			} else {
+				exitCode = 1
+			}
 		}
-		return string(output), nil
+		
+		// Split output into stdout/stderr (combined output doesn't separate them)
+		// For now, put all in stdout as we're using CombinedOutput
+		return fmt.Sprintf("NinaCmd: %s\nNinaExit: %d\nNinaStdout: %s\nNinaStderr: ", 
+			command, exitCode, string(output)), nil
 
-	case "read_file":
+	case "change_file":
+		// Map from Claude field names back to Nina field names
 		path, ok := toolCall.Input["path"].(string)
 		if !ok {
 			return "", fmt.Errorf("invalid path parameter")
 		}
+		search, ok := toolCall.Input["search"].(string)
+		if !ok {
+			return "", fmt.Errorf("invalid search parameter")
+		}
+		replace, ok := toolCall.Input["replace"].(string)
+		if !ok {
+			return "", fmt.Errorf("invalid replace parameter")
+		}
+
+		// Read file
 		content, err := os.ReadFile(path)
 		if err != nil {
-			return "", err
+			return fmt.Sprintf("NinaChange: %s\nNinaError: %v", path, err), nil
 		}
-		return string(content), nil
 
-	case "write_file":
-		path, ok := toolCall.Input["path"].(string)
-		if !ok {
-			return "", fmt.Errorf("invalid path parameter")
+		// Perform search/replace once
+		fileStr := string(content)
+		if !strings.Contains(fileStr, search) {
+			return fmt.Sprintf("NinaChange: %s\nNinaError: search text not found", path), nil
 		}
-		content, ok := toolCall.Input["content"].(string)
-		if !ok {
-			return "", fmt.Errorf("invalid content parameter")
-		}
-		err := os.WriteFile(path, []byte(content), 0644)
+		
+		// Replace first occurrence only
+		newContent := strings.Replace(fileStr, search, replace, 1)
+		
+		// Write back
+		err = os.WriteFile(path, []byte(newContent), 0644)
 		if err != nil {
-			return "", err
+			return fmt.Sprintf("NinaChange: %s\nNinaError: %v", path, err), nil
 		}
-		return fmt.Sprintf("Written %d bytes to %s", len(content), path), nil
+		
+		return fmt.Sprintf("NinaChange: %s", path), nil
 
 	default:
 		return "", fmt.Errorf("unknown tool: %s", toolCall.Name)
