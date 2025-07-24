@@ -46,6 +46,15 @@ func ProcessOutput(output string, _ *LoopState, _ bool) ProcessorResult {
 		Events: []ProcessorEvent{},
 	}
 
+	// Extract and print NinaMessage if present
+	ninaMessage, err := util.ExtractNinaMessage(output)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to extract NinaMessage: %v\n", err)
+	} else if ninaMessage != "" {
+		// Print NinaMessage to stderr with blue color
+		fmt.Fprintf(os.Stderr, "%s| %s |%s\n", ColorBlue, ninaMessage, ColorReset)
+	}
+
 	// Check for NinaStop but don't return immediately
 	stopReason, err := util.ParseNinaStop(output)
 	if err != nil {

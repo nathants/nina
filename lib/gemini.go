@@ -96,8 +96,8 @@ func (c *GeminiClient) CallWithStore(ctx context.Context, model, systemPrompt, u
 		InputCount: len(c.messages) - 1, // Approximate token count
 	}
 
-	// Print response with color
-	fmt.Printf("%s%s%s\n", ColorGreen, result, ColorReset)
+	// Print response without color
+	fmt.Printf("%s\n", result)
 
 	// Log API call
 	err = c.logAPICall(model, systemPrompt, userMessage, resp)

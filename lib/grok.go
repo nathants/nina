@@ -302,5 +302,5 @@ func (c *GrokClient) SupportsTools() bool {
 
 // CallWithTools returns an error as Grok doesn't support tool calling.
 func (c *GrokClient) CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) {
-	return nil, fmt.Errorf("Grok does not support native tool calling")
+	return nil, fmt.Errorf("grok does not support tool calling")
 }

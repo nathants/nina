@@ -18,10 +18,11 @@ func init() {
 
 type toolsArgs struct {
 	Model     string `arg:"-m,--model" default:"sonnet" help:"Model to use (e.g., sonnet, opus, o4-mini, gemini)"`
-	MaxTokens int    `arg:"-t,--max-tokens" default:"200000" help:"Maximum tokens to use"`
+	MaxTokens int    `arg:"--max-tokens" default:"200000" help:"Maximum tokens to use"`
 	Debug     bool   `arg:"-d,--debug" help:"Show debug output including tool calls"`
 	UUID      string `arg:"--uuid" help:"UUID for process tracking (used by integration tests)"`
 	Continue  bool   `arg:"-c,--continue" help:"Continue the last conversation from agents/api/*.input.json"`
+	Thinking  bool   `arg:"-t,--thinking" help:"Enable thinking mode for supported models"`
 }
 
 func (toolsArgs) Description() string {
@@ -48,6 +49,20 @@ func tools() {
 		stdinContent = strings.TrimSpace(string(stdinBytes))
 	}
 
+	// Check for TASK.md and use as prompt if no stdin
+	if stdinContent == "" {
+		if taskData, err := os.ReadFile("TASK.md"); err == nil && len(taskData) > 0 {
+			taskContent := strings.TrimSpace(string(taskData))
+			if taskContent != "" {
+				stdinContent = taskContent
+				// Wipe TASK.md after reading
+				if err := os.Truncate("TASK.md", 0); err != nil {
+					lib.LogStderr("Failed to truncate TASK.md: %v", err)
+				}
+			}
+		}
+	}
+
 	if stdinContent == "" {
 		lib.LogStderr("Error: no input provided")
 		os.Exit(1)
@@ -62,6 +77,7 @@ func tools() {
 		Continue:      args.Continue,
 		ToolProcessor: &processors.JSONToolProcessor{},
 		StdinContent:  stdinContent,
+		Thinking:      args.Thinking,
 	}
 
 	// Run the main loop

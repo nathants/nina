@@ -17,10 +17,11 @@ func init() {
 
 type runArgs struct {
 	Model     string `arg:"-m,--model" default:"o3" help:"o3, gemini, opus, sonnet, grok, k2"`
-	MaxTokens int    `arg:"-t,--max-tokens" default:"200000" help:"Maximum tokens to use"`
+	MaxTokens int    `arg:"--max-tokens" default:"200000" help:"Maximum tokens to use"`
 	Debug     bool   `arg:"-d,--debug" help:"Show raw NinaInput and NinaOutput XML content"`
 	UUID      string `arg:"--uuid" help:"UUID for process tracking (used by integration tests)"`
 	Continue  bool   `arg:"-c,--continue" help:"Continue the last conversation from agents/api/*.input.json"`
+	Thinking  bool   `arg:"-t,--thinking" help:"Enable thinking mode for supported models"`
 }
 
 func (runArgs) Description() string {
@@ -47,6 +48,20 @@ func run() {
 		stdinContent = strings.TrimSpace(string(stdinBytes))
 	}
 
+	// Check for TASK.md and use as prompt if no stdin
+	if stdinContent == "" {
+		if taskData, err := os.ReadFile("TASK.md"); err == nil && len(taskData) > 0 {
+			taskContent := strings.TrimSpace(string(taskData))
+			if taskContent != "" {
+				stdinContent = taskContent
+				// Wipe TASK.md after reading
+				if err := os.Truncate("TASK.md", 0); err != nil {
+					lib.LogStderr("Failed to truncate TASK.md: %v", err)
+				}
+			}
+		}
+	}
+
 	// Create loop configuration with XML tool processor
 	config := lib.LoopConfig{
 		Model:         args.Model,
@@ -56,6 +71,7 @@ func run() {
 		Continue:      args.Continue,
 		ToolProcessor: &processors.XMLToolProcessor{},
 		StdinContent:  stdinContent,
+		Thinking:      args.Thinking,
 	}
 
 	// Run the main loop

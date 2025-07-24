@@ -139,7 +139,7 @@ func (c *GroqClient) CompactMessages(keepRecentPairs int) CompactionResult {
 	}
 
 	// Estimate tokens for removed messages (rough approximation)
-	removedMessages := c.messages[1:len(c.messages)-keepCount+1]
+	removedMessages := c.messages[1 : len(c.messages)-keepCount+1]
 	for _, msg := range removedMessages {
 		result.TokensRemoved += len(msg.Content) / 4 // Rough token estimate
 	}
@@ -152,8 +152,6 @@ func (c *GroqClient) CompactMessages(keepRecentPairs int) CompactionResult {
 
 	return result
 }
-
-
 
 // helper function to get message count for logging
 func getMessageCount() int {
@@ -225,5 +223,5 @@ func (c *GroqClient) SupportsTools() bool {
 
 // CallWithTools returns an error as Groq doesn't support tool calling.
 func (c *GroqClient) CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) {
-	return nil, fmt.Errorf("Groq does not support native tool calling")
+	return nil, fmt.Errorf("groq does not support tool calling")
 }

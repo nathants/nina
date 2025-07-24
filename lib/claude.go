@@ -103,18 +103,29 @@ func (c *ClaudeClient) CallWithStore(ctx context.Context, model, systemPrompt, u
 	// Map nina model names to Claude models
 	var claudeModel string
 	var thinking *claude.Thinking
+
+	// Check if thinking is enabled in context
+	thinkingEnabled := false
+	if val := ctx.Value(contextKey("thinking")); val != nil {
+		thinkingEnabled = val.(bool)
+	}
+
 	switch model {
 	case "sonnet", "4-sonnet":
 		claudeModel = "claude-sonnet-4-20250514"
-		thinking = &claude.Thinking{
-			Type:         "enabled",
-			BudgetTokens: 24000,
+		if thinkingEnabled {
+			thinking = &claude.Thinking{
+				Type:         "enabled",
+				BudgetTokens: 24000,
+			}
 		}
 	case "opus", "4-opus":
 		claudeModel = "claude-opus-4-20250514"
-		thinking = &claude.Thinking{
-			Type:         "enabled",
-			BudgetTokens: 24000,
+		if thinkingEnabled {
+			thinking = &claude.Thinking{
+				Type:         "enabled",
+				BudgetTokens: 24000,
+			}
 		}
 	default:
 		return nil, fmt.Errorf("unknown Claude model: %s", model)

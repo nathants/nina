@@ -453,7 +453,7 @@ func Handle(ctx context.Context, req Request, reasoningCallback func(data string
 				index, _ := event["index"].(float64)
 				if contentBlockTypes[int(index)] == "thinking" && thinkingBuilder.Len() > 0 {
 					if ctx.Err() == nil && reasoningCallback != nil {
-						reasoningCallback("**reasoning**\n\n" + thinkingBuilder.String())
+						reasoningCallback(thinkingBuilder.String())
 					}
 					thinkingBuilder.Reset()
 				}
@@ -691,7 +691,7 @@ type Tool struct {
 
 // ToolChoice specifies which tools Claude can use
 type ToolChoice struct {
-	Type string `json:"type"` // "auto", "any", or "tool"
+	Type string `json:"type"`           // "auto", "any", or "tool"
 	Name string `json:"name,omitempty"` // Only for type "tool"
 }
 
@@ -735,19 +735,16 @@ type HandleToolsResponse struct {
 	ToolCalls []ToolUse
 }
 
-
-
-
 // TranslateToClaudeTools converts generic tool definitions to Claude's expected format.
 // Maps tool names and field names to match Claude's API requirements.
 func TranslateToClaudeTools(tools []prompts.ToolDefinition) []map[string]any {
 	claudeTools := make([]map[string]any, 0, len(tools))
-	
+
 	for _, tool := range tools {
 		// Map our tool names to Claude's expected names
 		claudeName := tool.Name
 		claudeDescription := tool.Description
-		
+
 		// For NinaBash, Claude expects "execute_bash"
 		if tool.Name == "NinaBash" {
 			claudeName = "execute_bash"
@@ -756,11 +753,11 @@ func TranslateToClaudeTools(tools []prompts.ToolDefinition) []map[string]any {
 		if tool.Name == "NinaChange" {
 			claudeName = "change_file"
 		}
-		
+
 		// Build properties for input schema
 		properties := make(map[string]any)
 		required := make([]string, 0)
-		
+
 		for _, field := range tool.InputSchema.Fields {
 			fieldName := field.Name
 			// Map field names for Claude
@@ -777,17 +774,17 @@ func TranslateToClaudeTools(tools []prompts.ToolDefinition) []map[string]any {
 					fieldName = "replace"
 				}
 			}
-			
+
 			properties[fieldName] = map[string]any{
 				"type":        field.Type,
 				"description": field.Description,
 			}
-			
+
 			if field.Required {
 				required = append(required, fieldName)
 			}
 		}
-		
+
 		claudeTool := map[string]any{
 			"name":        claudeName,
 			"description": claudeDescription,
@@ -797,10 +794,10 @@ func TranslateToClaudeTools(tools []prompts.ToolDefinition) []map[string]any {
 				"required":   required,
 			},
 		}
-		
+
 		claudeTools = append(claudeTools, claudeTool)
 	}
-	
+
 	return claudeTools
 }
 
@@ -809,7 +806,7 @@ func HandleTools(ctx context.Context, model, systemPrompt, userPrompt string, ma
 	// Get tool definitions from centralized source and translate to Claude format
 	toolDefs := prompts.GetToolDefinitions()
 	claudeToolDefs := TranslateToClaudeTools(toolDefs)
-	
+
 	// Convert to Claude's Tool type
 	tools := make([]Tool, 0, len(claudeToolDefs))
 	for _, def := range claudeToolDefs {
@@ -823,7 +820,7 @@ func HandleTools(ctx context.Context, model, systemPrompt, userPrompt string, ma
 
 	// Create messages array - we'll use the any type for content
 	messages := []map[string]any{{
-		"role": "user",
+		"role":    "user",
 		"content": userPrompt,
 	}}
 
@@ -986,7 +983,6 @@ func sendToolRequestRaw(ctx context.Context, reqBody map[string]any, debug bool)
 	return &response, nil
 }
 
-
 // executeToolCall executes a tool and returns the result matching XML.md format
 func executeToolCall(toolCall ToolUse) (string, error) {
 	switch toolCall.Name {
@@ -999,7 +995,7 @@ func executeToolCall(toolCall ToolUse) (string, error) {
 		// Execute bash command as defined in XML.md: bash -c "$cmd"
 		cmd := exec.Command("bash", "-c", command)
 		output, err := cmd.CombinedOutput()
-		
+
 		// Format result to match NinaResult structure from XML.md
 		exitCode := 0
 		if err != nil {
@@ -1009,10 +1005,10 @@ func executeToolCall(toolCall ToolUse) (string, error) {
 				exitCode = 1
 			}
 		}
-		
+
 		// Split output into stdout/stderr (combined output doesn't separate them)
 		// For now, put all in stdout as we're using CombinedOutput
-		return fmt.Sprintf("NinaCmd: %s\nNinaExit: %d\nNinaStdout: %s\nNinaStderr: ", 
+		return fmt.Sprintf("NinaCmd: %s\nNinaExit: %d\nNinaStdout: %s\nNinaStderr: ",
 			command, exitCode, string(output)), nil
 
 	case "change_file":
@@ -1041,16 +1037,16 @@ func executeToolCall(toolCall ToolUse) (string, error) {
 		if !strings.Contains(fileStr, search) {
 			return fmt.Sprintf("NinaChange: %s\nNinaError: search text not found", path), nil
 		}
-		
+
 		// Replace first occurrence only
 		newContent := strings.Replace(fileStr, search, replace, 1)
-		
+
 		// Write back
 		err = os.WriteFile(path, []byte(newContent), 0644)
 		if err != nil {
 			return fmt.Sprintf("NinaChange: %s\nNinaError: %v", path, err), nil
 		}
-		
+
 		return fmt.Sprintf("NinaChange: %s", path), nil
 
 	default:

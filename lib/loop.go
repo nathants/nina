@@ -19,6 +19,11 @@ import (
 	openai "github.com/nathants/nina/providers/openai"
 )
 
+// contextKey is a type for context keys to avoid collisions
+type contextKey string
+
+const thinkingKey contextKey = "thinking"
+
 // LoopState tracks the state of the running conversation loop.
 type LoopState struct {
 	TokensUsed    int // Cumulative tokens used across ALL iterations
@@ -77,6 +82,7 @@ type LoopConfig struct {
 	Continue      bool
 	ToolProcessor ToolProcessor
 	StdinContent  string // Initial content from stdin
+	Thinking      bool   // Enable thinking mode for supported models
 }
 
 // LogStderr logs a message to stderr with timestamp.
@@ -203,7 +209,7 @@ func RunLoop(config LoopConfig) error {
 		}
 
 		// Call AI provider
-		response, err := CallAIProvider(provider, model, systemPrompt, userMessage, state)
+		response, err := CallAIProvider(provider, model, systemPrompt, userMessage, state, config.Thinking)
 		if err != nil {
 			return fmt.Errorf("failed to call AI provider: %w", err)
 		}
@@ -286,8 +292,10 @@ func CreateProviderForModel(model string) (AIProvider, string, error) {
 }
 
 // CallAIProvider calls the AI provider with the given parameters.
-func CallAIProvider(provider AIProvider, model, systemPrompt, userMessage string, state *LoopState) (string, error) {
+func CallAIProvider(provider AIProvider, model, systemPrompt, userMessage string, state *LoopState, thinking bool) (string, error) {
 	ctx := context.Background()
+	// Add thinking flag to context
+	ctx = context.WithValue(ctx, thinkingKey, thinking)
 
 	// Track API call timing
 	callStart := time.Now()
