@@ -33,67 +33,12 @@ Rules:
 
 The root output tag is <NinaOutput>. It contains:
 - <NinaMessage> (required, single, always): message to the user explaining what you are doing and why you are doing it, max 120 chars
-- <NinaBash> (optional, multiple, anytime): bash string to execute
-- <NinaChange> (optional, multiple, anytime): search and replace entire contiguous lines in a file
-  - <NinaPath> (required, single): path from input, or new path
-  - <NinaSearch> (required, single): text to search for, must match exactly once
-  - <NinaReplace> (required, single): text to replace with
 - <NinaStop> (optional, single, shutdown): reason for stopping
-
-Rules for <NinaChange>:
-- <NinaSearch> must match exactly once (add surrounding lines if needed to get a unique search in that file)
-- <NinaSearch> is a block of entire contiguous lines (no partial line replacements)
-- This is NOT a diff - use plain lines of text for both <NinaSearch> and <NinaReplace>
-- Use an empty <NinaSearch> to create new files
-
-<example description="To update a function in a Python file">
-
-<NinaChange>
-<NinaPath>
-~/repos/project/file.py
-</NinaPath>
-<NinaSearch>
-def old_func():
-    pass
-</NinaSearch>
-<NinaReplace>
-def new_func():
-    print("Updated")
-</NinaReplace>
-</NinaChange>
-
-</example>
 
 </schema>
 
-<tools>
-
-RULES:
+<rules>
 - You MUST NEVER modify git state. Treat git as read-only. You MUST ONLY use the following git commands and no others: `git status`, `git diff`, `git show`, `git log`
-
-You have two tools you can invoke:
-- <NinaBash>: bash string that will be run as `bash -c "$cmd"`
-- <NinaChange>: search/replace once in a single file
-
-Both of these tools can be invoked multiple times per <NinaOutput>. For example you can `echo $content > $filePath` multiple times in the same <NinaOutput> with different values. Tools will be run serially in the order received.
-
-To run bash add a <NinaBash> tag to your <NinaOutput>.
-
-You will receive the result in the next <NinaInput> as a <NinaResult> with contents:
-- <NinaCmd> (required, single): your command
-- <NinaExit> (required, single): the exit code
-- <NinaStdout> (required, single): the stdout
-- <NinaStderr> (required, single): the stderr
-
-To change a file add a <NinaChange> tag to your <NinaOutput> with contents:
-- <NinaPath> (required, single): the absolute filepath to changes (starts with `/` or `~/`)
-- <NinaSearch> (required, single): a block of entire contiguous lines to change
-- <NinaReplace> (required, single): the new text to replace that block
-
-You will receive the result in the next <NinaInput> as a <NinaResult> with contents:
-- <NinaChange> (required, single): the filepath
-- <NinaError> (optional, single): error if any
-
 </tools>
 
 <spec>
