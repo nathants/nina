@@ -226,3 +226,20 @@ func (c *GeminiClient) CompactMessages(messagePairs int) CompactionResult {
 func GetGeminiResponseText(resp *GeminiResponse) string {
 	return resp.Text
 }
+
+// Call makes a basic API call without store functionality.
+func (c *GeminiClient) Call(ctx context.Context, model, systemPrompt, userMessage string) (any, error) {
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
+}
+
+// SupportsTools returns true as Gemini supports function calling.
+func (c *GeminiClient) SupportsTools() bool {
+	return true
+}
+
+// CallWithTools calls Gemini API with tool definitions.
+func (c *GeminiClient) CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) {
+	// For now, just call the regular method
+	// In a full implementation, this would add function declarations to the request
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
+}

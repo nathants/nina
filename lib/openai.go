@@ -86,9 +86,10 @@ func (c *OpenAIClient) CallWithStore(ctx context.Context, model, systemPrompt, u
 	var effort string
 	var temp float64
 	switch model {
-	case "o3":
+	case "o3", "o3-flex":
 		effort = "medium"
 	case "o4-mini", "o4-mini-flex":
+		// o4-mini doesn't support reasoning.effort
 		effort = "medium"
 	case "gpt-4.1":
 		temp = 0.6
@@ -350,4 +351,21 @@ func (c *OpenAIClient) CompactMessages(_ int) CompactionResult {
 		panic("no compaction yet")
 	}
 	return CompactionResult{MessagesRemoved: 0, TokensRemoved: 0}
+}
+
+// Call makes a basic API call without store functionality.
+func (c *OpenAIClient) Call(ctx context.Context, model, systemPrompt, userMessage string) (any, error) {
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
+}
+
+// SupportsTools returns true as OpenAI supports function calling.
+func (c *OpenAIClient) SupportsTools() bool {
+	return true
+}
+
+// CallWithTools calls OpenAI API with tool definitions.
+func (c *OpenAIClient) CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) {
+	// For now, just call the regular method
+	// In a full implementation, this would add functions to the request
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
 }

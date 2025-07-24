@@ -212,3 +212,18 @@ func logTextConversation(messages []groq.Message) {
 func GetGroqResponseText(resp *groq.HandleResponse) string {
 	return resp.Text
 }
+
+// Call makes a basic API call without store functionality.
+func (c *GroqClient) Call(ctx context.Context, model, systemPrompt, userMessage string) (any, error) {
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
+}
+
+// SupportsTools returns false as Groq doesn't currently support native tool calling.
+func (c *GroqClient) SupportsTools() bool {
+	return false
+}
+
+// CallWithTools returns an error as Groq doesn't support tool calling.
+func (c *GroqClient) CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) {
+	return nil, fmt.Errorf("Groq does not support native tool calling")
+}

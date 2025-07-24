@@ -289,3 +289,18 @@ func (c *GrokClient) CompactMessages(messagePairs int) CompactionResult {
 		TokensRemoved:   tokensRemoved,
 	}
 }
+
+// Call makes a basic API call without store functionality.
+func (c *GrokClient) Call(ctx context.Context, model, systemPrompt, userMessage string) (any, error) {
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
+}
+
+// SupportsTools returns false as Grok doesn't currently support native tool calling.
+func (c *GrokClient) SupportsTools() bool {
+	return false
+}
+
+// CallWithTools returns an error as Grok doesn't support tool calling.
+func (c *GrokClient) CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) {
+	return nil, fmt.Errorf("Grok does not support native tool calling")
+}

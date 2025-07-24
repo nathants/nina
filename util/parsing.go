@@ -36,14 +36,14 @@ var (
 	NinaInputStart   = "<" + "NinaInput" + ">"
 	NinaInputEnd     = "</" + "NinaInput" + ">"
 
-	NinaPromptStart = "<" + "NinaPrompt" + ">"
-	NinaPromptEnd   = "</" + "NinaPrompt" + ">"
+	NinaPromptStart       = "<" + "NinaPrompt" + ">"
+	NinaPromptEnd         = "</" + "NinaPrompt" + ">"
 	NinaSystemPromptStart = "<" + "NinaSystemPrompt" + ">"
 	NinaSystemPromptEnd   = "</" + "NinaSystemPrompt" + ">"
-	NinaFileStart   = "<" + "NinaFile" + ">"
-	NinaFileEnd     = "</" + "NinaFile" + ">"
-	NinaPatchStart  = "<" + "NinaPatch" + ">"
-	NinaPatchEnd    = "</" + "NinaPatch" + ">"
+	NinaFileStart         = "<" + "NinaFile" + ">"
+	NinaFileEnd           = "</" + "NinaFile" + ">"
+	NinaPatchStart        = "<" + "NinaPatch" + ">"
+	NinaPatchEnd          = "</" + "NinaPatch" + ">"
 
 	NinaBashStart   = "<" + "NinaBash" + ">"
 	NinaBashEnd     = "</" + "NinaBash" + ">"
@@ -92,6 +92,8 @@ type BashCommand struct {
 // CommandResult represents the result of executing a command
 type CommandResult struct {
 	Command  string
+	Cmd      string
+	Cwd      string
 	Args     []string
 	ExitCode int
 	Stdout   string
@@ -100,10 +102,12 @@ type CommandResult struct {
 
 // ChangeResult represents the result of applying a file change
 type ChangeResult struct {
-	FilePath string
-	Args     []string
-	Stdout   string
-	Stderr   string
+	FilePath     string
+	Args         []string
+	Stdout       string
+	Stderr       string
+	Error        string
+	LinesChanged int
 }
 
 func TrimBlankLines(lines []string) []string {

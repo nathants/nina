@@ -389,7 +389,24 @@ func (c *ClaudeClient) CompactMessages(messagePairs int) CompactionResult {
 	c.messages = c.messages[removeCount:]
 
 	return CompactionResult{
-		MessagesRemoved: removeCount,
+		MessagesRemoved: removeCount / 2,
 		TokensRemoved:   tokensRemoved,
 	}
+}
+
+// Call makes a basic API call without store functionality.
+func (c *ClaudeClient) Call(ctx context.Context, model, systemPrompt, userMessage string) (any, error) {
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
+}
+
+// SupportsTools returns true as Claude supports native tool calling.
+func (c *ClaudeClient) SupportsTools() bool {
+	return true
+}
+
+// CallWithTools calls Claude API with tool definitions.
+func (c *ClaudeClient) CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) {
+	// For now, just call the regular method
+	// In a full implementation, this would add tools to the request
+	return c.CallWithStore(ctx, model, systemPrompt, userMessage)
 }

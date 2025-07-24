@@ -10,8 +10,8 @@ import (
 	"strings"
 )
 
-// ExecuteBashCommand runs a bash command and returns the result
-func ExecuteBashCommand(cmd BashCommand) CommandResult {
+// ExecuteBash runs a bash command and returns the result
+func ExecuteBash(cmd BashCommand) CommandResult {
 	// Create command with bash -c
 	bashCmd := exec.Command("bash", "-c", cmd.Command)
 
@@ -35,8 +35,11 @@ func ExecuteBashCommand(cmd BashCommand) CommandResult {
 		}
 	}
 
+	cwd, _ := os.Getwd()
 	return CommandResult{
 		Command:  cmd.Command,
+		Cmd:      cmd.Command,
+		Cwd:      cwd,
 		Args:     cmd.Args,
 		ExitCode: exitCode,
 		Stdout:   stdout.String(),
@@ -158,4 +161,88 @@ func FormatNinaResult(cmdResult *CommandResult, changeResult *ChangeResult) stri
 
 	buf.WriteString("</NinaResult>")
 	return buf.String()
+}
+
+// ExecuteBash executes a bash command and returns the result
+func ExecuteBashWithArgs(command string, args []string) CommandResult {
+	bashCmd := BashCommand{
+		Command: command,
+		Args:    args,
+	}
+	return ExecuteBash(bashCmd)
+}
+
+// ExecuteChange applies a file change and returns the result
+func ExecuteChange(filepath, searchText, replaceText string) ChangeResult {
+	// Expand home directory if needed
+	if strings.HasPrefix(filepath, "~/") {
+		homeDir, err := os.UserHomeDir()
+		if err == nil {
+			filepath = strings.Replace(filepath, "~/", homeDir+"/", 1)
+		}
+	}
+
+	// Read the file
+	content, err := os.ReadFile(filepath)
+	if err != nil {
+		return ChangeResult{
+			FilePath: filepath,
+			Stderr:   fmt.Sprintf("Failed to read file: %v", err),
+		}
+	}
+
+	// Create file update
+	update := FileUpdate{
+		FileName: filepath,
+	}
+
+	var newContent string
+	if searchText == "" {
+		// Full file replacement
+		update.ReplaceLines = strings.Split(replaceText, "\n")
+		newContent, err = ApplyFileUpdates(string(content), []FileUpdate{update})
+	} else {
+		// Search/replace update
+		update.SearchLines = TrimBlankLines(strings.Split(searchText, "\n"))
+		update.ReplaceLines = TrimBlankLines(strings.Split(replaceText, "\n"))
+
+		// Apply the update directly without AI conversion
+		newContent, err = ApplyFileUpdates(string(content), []FileUpdate{update})
+	}
+
+	if err != nil {
+		return ChangeResult{
+			FilePath: filepath,
+			Stderr:   fmt.Sprintf("Failed to apply changes: %v", err),
+		}
+	}
+
+	// Count changed lines
+	oldLines := strings.Split(string(content), "\n")
+	newLines := strings.Split(newContent, "\n")
+	linesChanged := 0
+	maxLen := len(oldLines)
+	if len(newLines) > maxLen {
+		maxLen = len(newLines)
+	}
+
+	for i := 0; i < maxLen; i++ {
+		if i >= len(oldLines) || i >= len(newLines) || oldLines[i] != newLines[i] {
+			linesChanged++
+		}
+	}
+
+	// Write the file
+	err = os.WriteFile(filepath, []byte(newContent), 0644)
+	if err != nil {
+		return ChangeResult{
+			FilePath: filepath,
+			Stderr:   fmt.Sprintf("Failed to write file: %v", err),
+		}
+	}
+
+	return ChangeResult{
+		FilePath:     filepath,
+		LinesChanged: linesChanged,
+	}
 }

@@ -1,16 +1,14 @@
-
 // Tools command that uses JSON tool calling with Claude API
 package tools
 
 import (
-	"context"
-	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/alexflint/go-arg"
 	"github.com/nathants/nina/lib"
-	claude "github.com/nathants/nina/providers/claude"
+	"github.com/nathants/nina/lib/processors"
 )
 
 func init() {
@@ -19,9 +17,11 @@ func init() {
 }
 
 type toolsArgs struct {
-	Model     string `arg:"-m,--model" default:"sonnet" help:"sonnet, opus, haiku"`
-	MaxTokens int    `arg:"-t,--max-tokens" default:"4096" help:"Maximum tokens to use"`
+	Model     string `arg:"-m,--model" default:"sonnet" help:"Model to use (e.g., sonnet, opus, o4-mini, gemini)"`
+	MaxTokens int    `arg:"-t,--max-tokens" default:"200000" help:"Maximum tokens to use"`
 	Debug     bool   `arg:"-d,--debug" help:"Show debug output including tool calls"`
+	UUID      string `arg:"--uuid" help:"UUID for process tracking (used by integration tests)"`
+	Continue  bool   `arg:"-c,--continue" help:"Continue the last conversation from agents/api/*.input.json"`
 }
 
 func (toolsArgs) Description() string {
@@ -32,46 +32,41 @@ func tools() {
 	var args toolsArgs
 	arg.MustParse(&args)
 
-	// Initialize session for timestamp
-	lib.InitializeSession(false)
+	// Initialize session for proper log numbering
+	lib.InitializeSession(args.Continue)
 
-	// Read input from stdin
-	input, err := io.ReadAll(os.Stdin)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading stdin: %v\n", err)
-		os.Exit(1)
+	// Read stdin content
+	stdinContent := ""
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		// Input is available (pipe or redirect)
+		stdinBytes, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			lib.LogStderr("Failed to read stdin: %v", err)
+			os.Exit(1)
+		}
+		stdinContent = strings.TrimSpace(string(stdinBytes))
 	}
-	if len(input) == 0 {
-		fmt.Fprintf(os.Stderr, "Error: no input provided\n")
-		os.Exit(1)
-	}
-	prompt := string(input)
 
-	// Use a simple system prompt for JSON tools
-	systemPrompt := "You are a helpful AI assistant with access to tools. Use the provided tools to help answer questions and complete tasks."
-
-	// Map model names to Claude API model identifiers
-	modelMap := map[string]string{
-		"sonnet": "claude-3-5-sonnet-20241022",
-		"opus":   "claude-3-opus-20240229",
-		"haiku":  "claude-3-haiku-20240307",
-	}
-	
-	claudeModel, ok := modelMap[args.Model]
-	if !ok {
-		fmt.Fprintf(os.Stderr, "Error: unsupported model: %s\n", args.Model)
-		fmt.Fprintf(os.Stderr, "Supported models: sonnet, opus, haiku\n")
+	if stdinContent == "" {
+		lib.LogStderr("Error: no input provided")
 		os.Exit(1)
 	}
 
-	// Call Claude with tools
-	ctx := context.Background()
-	response, err := claude.HandleTools(ctx, claudeModel, systemPrompt, prompt, args.MaxTokens, args.Debug)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error handling tools: %v\n", err)
-		os.Exit(1)
+	// Create loop configuration with JSON tool processor
+	config := lib.LoopConfig{
+		Model:         args.Model,
+		MaxTokens:     args.MaxTokens,
+		Debug:         args.Debug,
+		UUID:          args.UUID,
+		Continue:      args.Continue,
+		ToolProcessor: &processors.JSONToolProcessor{},
+		StdinContent:  stdinContent,
 	}
 
-	// Output response
-	fmt.Println(response.Text)
+	// Run the main loop
+	if err := lib.RunLoop(config); err != nil {
+		lib.LogStderr("Error: %v", err)
+		os.Exit(1)
+	}
 }

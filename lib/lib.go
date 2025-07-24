@@ -31,10 +31,14 @@ var Args = map[string]ArgsStruct{}
 // AIProvider defines the interface for AI model providers like OpenAI and Claude
 // implementations maintain conversation history and handle API calls
 type AIProvider interface {
+	Call(ctx context.Context, model, systemPrompt, userMessage string) (any, error) // Basic call without store
 	CallWithStore(ctx context.Context, model, systemPrompt, userMessage string) (any, error)
 	GetTokenUsage(resp any) (promptTokens, completionTokens, totalTokens int)
 	GetDetailedUsage(resp any) TokenUsage // New method for cache tokens
 	CompactMessages(messagePairs int) CompactionResult // Compact message history when approaching token limit
+	// Tool support methods
+	SupportsTools() bool // Whether this provider supports native tool calling
+	CallWithTools(ctx context.Context, model, systemPrompt, userMessage string, tools []any) (any, error) // Call with tool definitions
 }
 
 // AIResponse is a generic interface for provider-specific responses
@@ -189,7 +193,6 @@ func ConvertToRangeUpdates(ctx context.Context, updates []util.FileUpdate, sessi
 			searchText := strings.Join(util.TrimBlankLines(upd.SearchLines), "\n")
 
 			for attempt := 1; attempt <= maxAttempts; attempt++ {
-				// Build the conversion request following convert.md format
 				var b strings.Builder
 				b.WriteString("\n\n# Input data\n\n")
 

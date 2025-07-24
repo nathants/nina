@@ -1,13 +1,12 @@
 package lib
 
 import (
-	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
-	"time"
 
+	// Removed lib/tools import - functions moved to util
+	"github.com/nathants/nina/prompts"
 	util "github.com/nathants/nina/util"
 )
 
@@ -131,14 +130,6 @@ func applyNinaChange(change string) ProcessorEvent {
 	}
 	filepath = strings.TrimSpace(filepath)
 
-	// Expand home directory if filepath starts with ~
-	if strings.HasPrefix(filepath, "~/") {
-		homeDir, err := os.UserHomeDir()
-		if err == nil {
-			filepath = strings.Replace(filepath, "~", homeDir, 1)
-		}
-	}
-
 	// Extract NinaSearch
 	searchText, _ := util.ExtractSingle(change, util.NinaSearchStart, util.NinaSearchEnd)
 	searchText = strings.TrimSpace(searchText)
@@ -153,163 +144,40 @@ func applyNinaChange(change string) ProcessorEvent {
 		}
 	}
 
-	// Read existing file content
-	existingData, err := os.ReadFile(filepath)
-	var content string
-	existingLines := 0
+	// Use shared executor
+	result := util.ExecuteChange(filepath, searchText, replaceText)
 
-	if err != nil {
-		// If file doesn't exist and search is empty, create new file
-		if os.IsNotExist(err) && searchText == "" {
-			content = ""
-		} else {
-			return ProcessorEvent{
-				Type:     "NinaChange",
-				Filepath: filepath,
-				Reason:   fmt.Sprintf("Failed to read file: %v", err),
-			}
-		}
-	} else {
-		content = string(existingData)
-		existingLines = len(strings.Split(content, "\n"))
-	}
-
-	// Create FileUpdate structure for nina-util
-	update := util.FileUpdate{
-		FileName: filepath,
-	}
-
-	var newContent string
-	if searchText == "" {
-		// Full file replacement
-		update.ReplaceLines = strings.Split(replaceText, "\n")
-		newContent, err = util.ApplyFileUpdates(content, []util.FileUpdate{update})
-	} else {
-		// Search/replace update - use ConvertToRangeUpdates for AI line conversion
-		update.SearchLines = util.TrimBlankLines(strings.Split(searchText, "\n"))
-		update.ReplaceLines = util.TrimBlankLines(strings.Split(replaceText, "\n"))
-
-		// Create session state for conversion
-		session := &util.SessionState{
-			OrigFiles:     map[string]string{filepath: content},
-			SelectedFiles: map[string]string{},
-			PathMap:       map[string]string{filepath: filepath},
-		}
-
-		// Convert search/replace to range updates using AI
-		ctx := context.Background()
-		rangeUpdates, err := ConvertToRangeUpdates(ctx, []util.FileUpdate{update}, session, nil)
-		if err != nil {
-			return ProcessorEvent{
-				Type:     "NinaChange",
-				Filepath: filepath,
-				Reason:   fmt.Sprintf("Failed to convert to range updates: %v", err),
-			}
-		}
-
-		// Apply the converted range updates
-		newContent, err = util.ApplyFileUpdates(content, rangeUpdates)
-		if err != nil {
-			return ProcessorEvent{
-				Type:     "NinaChange",
-				Filepath: filepath,
-				Reason:   fmt.Sprintf("Failed to apply range updates: %v", err),
-			}
-		}
-	}
-
-	if err != nil {
+	if result.Error != "" {
 		return ProcessorEvent{
 			Type:     "NinaChange",
-			Filepath: filepath,
-			Reason:   fmt.Sprintf("Failed to apply update: %v", err),
+			Filepath: result.FilePath,
+			Reason:   result.Error,
 		}
 	}
-
-	// Write the new content
-	err = os.WriteFile(filepath, []byte(newContent), 0644)
-	if err != nil {
-		return ProcessorEvent{
-			Type:     "NinaChange",
-			Filepath: filepath,
-			Reason:   fmt.Sprintf("Failed to write file: %v", err),
-		}
-	}
-
-	// Count new lines
-	newLines := len(strings.Split(newContent, "\n"))
-	linesChanged := abs(newLines - existingLines)
 
 	return ProcessorEvent{
 		Type:         "NinaChange",
-		Filepath:     filepath,
-		LinesChanged: linesChanged,
+		Filepath:     result.FilePath,
+		LinesChanged: result.LinesChanged,
 	}
 }
 
 func executeNinaBash(bashCmd util.BashCommand) ProcessorEvent {
-	cwd, _ := os.Getwd()
-
-	// Build command
-	var command *exec.Cmd
-	if len(bashCmd.Args) > 0 {
-		// Command with args
-		command = exec.Command(bashCmd.Command, bashCmd.Args...)
-	} else {
-		// Single command string - execute via bash
-		command = exec.Command("timeout", "300s", "bash", "-c", bashCmd.Command)
-	}
-
-	stdout, err := command.Output()
-
-	exitCode := 0
-	stderr := ""
-
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			exitCode = exitErr.ExitCode()
-			stderr = string(exitErr.Stderr)
-		} else {
-			exitCode = -1
-			stderr = err.Error()
-		}
-	}
-
-	// Determine what was actually executed for logging
-	cmd := bashCmd.Command
-	args := bashCmd.Args
-	if len(bashCmd.Args) == 0 {
-		// If executed via bash -c
-		cmd = "bash"
-		args = []string{"-c", bashCmd.Command}
-	}
+	// Use shared executor
+	result := util.ExecuteBash(bashCmd)
 
 	return ProcessorEvent{
 		Type:     "NinaBash",
-		Cwd:      cwd,
-		Cmd:      cmd,
-		Args:     args,
-		ExitCode: exitCode,
-		Stdout:   string(stdout),
-		Stderr:   stderr,
+		Cwd:      result.Cwd,
+		Cmd:      result.Cmd,
+		Args:     result.Args,
+		ExitCode: result.ExitCode,
+		Stdout:   result.Stdout,
+		Stderr:   result.Stderr,
 	}
 }
 
-func abs(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
-}
-
-// LoopState is referenced from run.go
-type LoopState struct {
-	ResponseID    string
-	TokensUsed    int
-	MaxTokens     int
-	StartTime     time.Time
-	MessagesCount int
-}
+// LoopState is now defined in loop.go
 
 // LogEvent logs an event to stdout in the required format
 func LogEvent(event Event) {
@@ -321,4 +189,18 @@ func LogEvent(event Event) {
 
 func IsDebugMode() bool {
 	return os.Getenv("DEBUG") != ""
+}
+
+// LoadSystemPromptWithXML loads SYSTEM.md and XML.md prompts.
+// This is the standard system prompt for both XML and JSON processors.
+func LoadSystemPromptWithXML() string {
+	systemPrompt, err := prompts.EmbeddedFiles.ReadFile("SYSTEM.md")
+	if err != nil {
+		panic(err)
+	}
+	xmlPrompt, err := prompts.EmbeddedFiles.ReadFile("XML.md")
+	if err != nil {
+		panic(err)
+	}
+	return string(systemPrompt) + "\n" + string(xmlPrompt)
 }
