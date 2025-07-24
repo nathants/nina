@@ -325,7 +325,7 @@ func run() {
 	}
 
 	// Load system prompt
-	systemPrompt := loadSystemPrompt()
+	systemPrompt := loadSystemPrompt() + "\n\n" + loadXmlPrompt()
 
 	// Show system prompt in debug mode
 	if args.Debug {
@@ -419,10 +419,20 @@ func initLogging() error {
 
 	return nil
 }
-
 func loadSystemPrompt() string {
-	fmt.Println("adding SYSTEM.md")
-	data, err := prompts.EmbeddedFiles.ReadFile("SYSTEM.md")
+	fileName := "SYSTEM.md"
+	fmt.Println("adding", fileName)
+	data, err := prompts.EmbeddedFiles.ReadFile(fileName)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
+}
+
+func loadXmlPrompt() string {
+	fileName := "XML.md"
+	fmt.Println("adding", fileName)
+	data, err := prompts.EmbeddedFiles.ReadFile(fileName)
 	if err != nil {
 		panic(err)
 	}
@@ -430,8 +440,9 @@ func loadSystemPrompt() string {
 }
 
 func loadMemoryPrompt() string {
-	fmt.Println("adding MEMORY.md")
-	data, err := prompts.EmbeddedFiles.ReadFile("MEMORY.md")
+	fileName := "MEMORY.md"
+	fmt.Println("adding", fileName)
+	data, err := prompts.EmbeddedFiles.ReadFile(fileName)
 	if err != nil {
 		panic(err)
 	}
@@ -439,8 +450,9 @@ func loadMemoryPrompt() string {
 }
 
 func loadCodingPrompt() string {
-	fmt.Println("adding CODING.md")
-	data, err := prompts.EmbeddedFiles.ReadFile("CODING.md")
+	fileName := "CODING.md"
+	fmt.Println("adding", fileName)
+	data, err := prompts.EmbeddedFiles.ReadFile(fileName)
 	if err != nil {
 		panic(err)
 	}

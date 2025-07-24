@@ -12,6 +12,7 @@
 <task>
 - Determine the line range in <NinaFile> that corresponds to <NinaSearch>
 - Output the line range
+- If there is no match, output: {"start": -1, "end": -1}
 </task>
 
 <output>
